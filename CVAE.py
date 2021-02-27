@@ -14,49 +14,49 @@ K.clear_session()
 
 ### Creating prior distribution(encoder)
 ###
-prior = tfd.Independent( tfd.Normal(loc = tf.zeros(encoded_size), scale = 1), \
-            reinterpreted_batch_dims = 1, name = "prior")
+prior = tfd.Independent( tfd.Normal(loc = tf.zeros(encoded_size), scale = 1),
+    reinterpreted_batch_dims = 1, name = "prior")
 
 encoder = models.Sequential([ 
     layers.InputLayer(input_shape = input_shape),
     layers.Lambda( lambda x: tf.cast(x,tf.float32) - 0.5),
     layers.Conv2D(base_depth, 5, strides = 1, padding = "same", 
-        activation = tf.nn.leaky_relu),
-     layers.Conv2D(base_depth, 5, strides = 2, padding = "same", 
-         activation = tf.nn.leaky_relu),
-     layers.Conv2D(2*base_depth,5 ,strides = 1, padding = "same", 
-         activation = tf.nn.leaky_relu),
-     layers.Conv2D(2*base_depth,5 ,strides = 2, padding = "same",  
-         activation = tf.nn.leaky_relu),
-     layers.Conv2D(4*base_depth, 7, strides = 1,\
-                    padding = "same", activation = tf.nn.leaky_relu),
-     layers.Flatten(),
-     layers.Dense(tfpl.MultivariateNormalTriL.params_size(encoded_size), 
-                activation = None),
-     tfpl.MulticariateNormalTriL( encoded_size,
-                activity_regulizer = tfpl.LKDivergenceRegularizer(prior)
+               activation = tf.nn.leaky_relu),
+    layers.Conv2D(base_depth, 5, strides = 2, padding = "same", 
+               activation = tf.nn.leaky_relu),
+    layers.Conv2D(2*base_depth,5 ,strides = 1, padding = "same", 
+               activation = tf.nn.leaky_relu),
+    layers.Conv2D(2*base_depth,5 ,strides = 2, padding = "same",  
+               activation = tf.nn.leaky_relu),
+    layers.Conv2D(4*base_depth, 7, strides = 1,\
+               padding = "same", activation = tf.nn.leaky_relu),
+    layers.Flatten(),
+    layers.Dense(tfpl.MultivariateNormalTriL.params_size(encoded_size), 
+               activation = None),
+    tfpl.MultiVariateNormalTriL( encoded_size,
+               activity_regulizer = tfpl.LKDivergenceRegularizer(prior))
             ], name = "encoder")
 
 ##Creating de Deconvolutional Decoder
 decoder = models.Sequential([
     layers.InputLayer(input_shape = [encoded_size]),
-    layers.Conv2DTranspose(2*base_depth, 7, strides = 1,\
-                    padding = "valid", activation = tf.nn.leaky_relu),
+    layers.Conv2DTranspose(2*base_depth, 7, strides = 1,
+               padding = "valid", activation = tf.nn.leaky_relu),
 
     layers.Conv2DTranspose(2*base_depth, 5, strides = 1,\
-                    padding = "same", activation = tf.nn.leaky_relu),
+               padding = "same", activation = tf.nn.leaky_relu),
 
     layers.Conv2DTranspose(2*base_depth, 5, strides = 2,\
-                    padding = "same", activation = tf.nn.leaky_relu),
+               padding = "same", activation = tf.nn.leaky_relu),
 
      layers.Conv2DTranspose(base_depth, 5, strides = 1,\
-                    padding = "same", activation = tf.nn.leaky_relu),
+               padding = "same", activation = tf.nn.leaky_relu),
 
      layers.Conv2DTranspose(base_depth, 5, strides = 2,\
-                    padding = "same", activation = tf.nn.leaky_relu),
+               padding = "same", activation = tf.nn.leaky_relu),
 
      layers.Conv2DTranspose(base_depth, 5, strides = 1,\
-                    padding = "same", activation = None),
+               padding = "same", activation = None),
      layers.Flatten(),
      tfpl.IndependentBernoulli(input_shape, tfd.Bernoulli.logits)
     ], name = "Decoder")
@@ -69,9 +69,11 @@ vae = models.Model(inputs = encoder.inputs, outputs = decoder(encoder.outputs[0]
 #utils.plot_model(vae, show_shapes = True, show_layer_names = False)
 #
 #
-
+#define the loss function
 negloglik = lambda x. rv_x: -rv_x.log_prob(x)
+#set the VAE model
 vae.compile(optimizer = optimizers.Adam(learning_rate = 1e-3),loss = negloglik)
+#training model
 history = vae.fit(train_dataset, epochs = 15, validation_data = eval_dataset)
 
 ## TEST THE MODEL
