@@ -4,6 +4,7 @@ import tensorflow.keras.backend as K
 import matplotlib.pyplot as plt
 import tensorflow_probability as tfp
 tfpl = tfp.layers
+tfd = tfp.distributions
 ##
 ## Defining model parameters
 ##
